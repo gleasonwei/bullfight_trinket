@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script src="./source.js"></script>
+<script>
+    // 胜利条件1：得分高的一方获胜
+    // 胜利条件2：得分相同，牌面最大的一张 胜
+    // 胜利条件3：1和2都相同，看最大牌的牌型，S < H < C < D
+
+    // 源数据是字符串，命名为data，此处分割为数组
+    data = data.split(/[\s\n]/).filter((value)=>{
+        return value
+    });
+    // leon胜利次数，judy胜利次数，完全相等次数
+    let countLeon = 0,countJudy = 0,fullEqual = 0,lengthError = 0,simbolError=0,wrongCard=0;
+    // 所有能凑为被10整除的数的集合
+    let resbox = new Set();
+
+    // 取补集
+    function complement(arr1,arr2) {
+        return arr1.filter(function (val) {
+            return !(arr2.indexOf(val) > -1)
+        })
+        .concat(arr2.filter(function (val) {
+            return !(arr1.indexOf(val) > -1)
+        }))
+    }
+    // 范围随机数
+	function random(min,max,isZ=true){
+		if(isZ){
+			return Math.floor(Math.random()*(max-min+1)+min);
+		}else{
+			return Math.random()*(max-min+1)+min;
+		}
+	}
+    // 每张牌
+	class Card{
+		constructor(face,type='Null'){
+			this.value = this.getValue(face);               // 实际的值
+			this.face = face.toString();                                // 牌面名称
+            this.faceRangeValue = this.getRangeValue(face);             // 牌的大小
+			this.type = type;                                           // 牌型
+			this.shortcut = this.type[0].toUpperCase()+this.face;       // 缩写
+			this.wrongCard = !allface.includes(face);
+			this.name = '';
+            this.getName()
+		}
+		getName(){
+			switch (this.type) {
+                case 'H':
+                	this.name='红桃'+this.face;
+                	break;
+				case 'S':
+					this.name='黑桃'+this.face;
+					break;
+				case 'C':
+					this.name='梅花'+this.face;
+					break;
+				case 'D':
+					this.name='方块'+this.face;
+					break;
+			}
+        }
+		getValue(face){
+			let res;
+			if(Number(face)){
+				return Number(face);
+			}
+			switch (face) {
+				case 'A':
+					res = 1;
+					break;
+				case 'J':
+					res = 10;
+					break;
+				case 'Q':
+					res = 10;
+					break;
+				case 'K':
+					res = 10;
+					break;
+			}
+			return res
+        }
+		getRangeValue(face){
+			let res;
+			if(Number(face)){
+				return Number(face);
+            }
+			switch (face) {
+                case 'A':
+                	res = 1;
+                	break;
+                case 'J':
+                	res = 11;
+                	break;
+				case 'Q':
+					res = 12;
+					break;
+				case 'K':
+					res = 13;
+					break;
+			}
+			return res
+        }
+	}
+	// 每种牌面
+	let allface = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+    // 每种牌型
+	let type = ['heart','spade','club','diamond'];
+    // 3个数按顺序排列转为字符串
+	function threeToOneNumber(num1,num2,num3) {
+		let arr = [num1,num2,num3];
+		arr.sort(function (a,b) {
+            return a - b
+		});
+		return arr.join('')
+	}
+	// 拿到最大的牌
+    function getBigestCard(cardList){
+		let res,tempValue=0;
+		for(let item of cardList){
+			if(item.faceRangeValue>tempValue){
+				tempValue = item.faceRangeValue;
+				res = item;
+            }
+        }
+		return res;
+    }
+
+    // 获取得分
+	function score(face1,face2,face3,face4,face5) {
+	    // list是每手牌的列表，内容为Card的实例对象
+	    let list = [];
+	    for(let item of arguments){
+	        if(typeof item === 'object'){
+	            list.push(item)
+            }else{
+                list.push(new Card(item.toString()))
+            }
+        }
+	    list.sort((a,b)=>{
+	        return a.value-b.value;
+	    });
+	    // 可能出现3张牌的列表
+	    let couldList = [];
+	    // 每5张牌抽3张能组成的所有不重复排列；
+	    for(let i =0;i<list.length;i++){
+	        for(let j=i+1;j<list.length-1;j++){
+	            for(let k=j+1;k<list.length;k++){
+                    couldList.push({
+                        list,//手牌数据
+                        bigestCard: getBigestCard(list),
+                        value: [list[i].value,list[j].value,list[k].value].join(''),// 组合出来的3张牌
+                        threeSum: list[i].value*1+list[j].value*1+list[k].value*1,// 3张牌的和   ----胜利条件2
+                        preSum: complement([0,1,2,3,4],[i,j,k])// 剩余两个的下标， ----胜利条件1
+                    })
+                }
+            }
+        }
+	    // score可以被优化掉，是之前的代码没考虑Card实例的情况
+	    let score=0,confirm={
+	        list,
+		    bigestCard: getBigestCard(list),
+            threeSum:0,
+	        score:0
+        };
+	    for(let item of couldList){
+	        if(resbox.has(item.value)){
+                confirm = item;
+	            for(let index of item.preSum){
+	                score += list[index].value;
+                }
+	            if(score>10){
+	                score-=10;
+                }
+	            confirm.score = score;
+	            break;
+            }
+        }
+	    // 返回结果
+	    return confirm
+    }
+    // 生成每手牌的列表 --5张
+    function generateCard(code) {
+		let face='',type='',isfirst=true,cardList=[];
+		for(let i=0;i<code.length;i++){
+			if(!allface.includes(code[i])&&code[i]!=='1'&&code[i]!=='0'){
+				if(isfirst){
+					isfirst = false;
+                }else{
+					cardList.push(new Card(face,type));
+                    face = '';
+                }
+				type = code[i];
+            }else{
+				face += code[i];
+            }
+        }
+	    cardList.push(new Card(face,type));
+		return cardList
+    }
+    // 按照类型判断胜负 ---胜利类型3
+    function jugeType(list1,list2) {
+        let type1 = list1.bigestCard.type;
+        let type2 = list2.bigestCard.type;
+        type1 = getNumberFromType(type1);
+        type2 = getNumberFromType(type2);
+        if(type1>type2){
+            countLeon +=1;
+	        output(list1,list2,'Leon胜利')
+        }else if(type1<type2){
+            countJudy +=1;
+	        output(list1,list2,'Judy胜利')
+        }else{
+            fullEqual +=1;
+        }
+    }
+    // 把牌型转换为数字进行比较
+    function getNumberFromType(type) {
+	    let value = 0;
+        switch (type) {
+            case 'S':
+                value = 0;
+                break;
+            case 'H':
+                value = 1;
+                break;
+            case 'C':
+                value = 2;
+                break;
+            case 'D':
+                value = 3;
+                break;
+        }
+        return value
+    }
+    // 比较两手牌
+    function judge(datacode) {
+	    // 得到双方的5张牌的编码
+        let cards = datacode.split(';');
+        if(cards.length<2){
+	        simbolError++;
+	        output(null,null,'符号错误');
+        	return
+        }
+        let [Leon,Judy] = cards;
+        // 过滤数据长度不正确的情况
+        let Leoncard = generateCard(Leon);
+        let Judycard = generateCard(Judy);
+        if(Leoncard.length!==5||Judycard.length!==5){
+            lengthError++;
+	        output({list:Leoncard},{list:Judycard},'手牌长度错误');
+            return;
+        }
+        if(check(Leoncard)||check(Judycard)){
+            wrongCard++;
+	        output({list:Leoncard},{list:Judycard},'手牌错误');
+            return;
+        }
+        let Leondata = score(...Leoncard)||0;
+        let Judydata = score(...Judycard)||0;
+        if(Leondata.score>Judydata.score){
+            countLeon +=1;
+	        output(Leondata,Judydata,'Leon胜利')
+        }else if(Leondata.score<Judydata.score){
+            countJudy +=1;
+	        output(Leondata,Judydata,'Judy胜利')
+        }else{
+            if(Leondata.bigestCard.faceRangeValue>Judydata.bigestCard.faceRangeValue){
+                countLeon +=1;
+	            output(Leondata,Judydata,'Leon胜利')
+            }else if(Leondata.bigestCard.faceRangeValue<Judydata.bigestCard.faceRangeValue){
+                countJudy +=1;
+	            output(Leondata,Judydata,'Judy胜利')
+            }else{
+                jugeType(Leondata,Judydata)
+            }
+        }
+
+    }
+    // 验证手牌正确性是否有错
+    function check(cardlist) {
+        for(let item of cardlist){
+        	if(item.wrongCard){
+        		return true
+            }
+        }
+        return false
+    }
+    let outputcount=1;
+    // 输出结果
+    function output(Leon,Judy,flag) {
+	    let data = `第${outputcount}条记录:\n`;
+	    if(outputcount === 3409){
+	    	console.log(Leon);
+        }
+		if(Leon&&Judy){
+			data += `Leon:`;
+			for(let item of Leon.list){
+				data += ` ${item.name}`
+			}
+			data+=` 得分：${Leon.score} 最大牌为：${Leon.bigestCard&&Leon.bigestCard.name}`;
+			data +='\nJudy:';
+			for(let item of Judy.list){
+				data += ` ${item.name}`
+			}
+			data+=` 得分：${Judy.score} 最大牌为：${Judy.bigestCard&&Judy.bigestCard.name}`;
+
+        }
+	    data +=`\n结果:${flag}`;
+	    outputcount++;
+	    let div = document.createElement('div');
+	    div.innerText = data;
+	    document.body.appendChild(div);
+    }
+
+</script>
+<script>
+    let cardbox = [];
+
+    // 构建牌库
+    for(let t of type){
+    	for(let f of allface){
+    		cardbox.push(new Card(f,t))
+        }
+    }
+    // 洗牌
+    for(let i = cardbox.length-1; i>=1; i--){
+	    let rand = random(0,i);
+	    let temp = cardbox[i];
+	    cardbox[i] = cardbox[rand];
+	    cardbox[rand] = temp;
+    }
+    let length = 0;
+    // 得出所有3个数的和能被10整除的所有情况
+    for(let num1 = 1;num1<=10;num1++){
+	    for(let num2 = 1;num2<=10;num2++){
+		    for(let num3 = 1;num3<=10;num3++){
+		    	let sum = num1+num2+num3;
+			    if(!(sum%10)){
+			        // 把结果添加到Set集合里，例如 1，2，7，Set中就会得出‘127’；6，5，4，Set中就会得出‘456’
+				    resbox.add(threeToOneNumber(num1,num2,num3));
+                }
+		    }
+	    }
+    }
+    // 遍历data，判断得分情况
+    for(let item of data){
+        judge(item)
+    }
+    let div = document.createElement('div');
+    div.innerText =  `\n总比赛次数为:${data.length}次，\nLeon胜利:${countLeon}次，\nJudy胜利:${countJudy}次,\n完全相等:${fullEqual}次,
+符号记录错误:${simbolError}次,\n手牌长度错误:${lengthError}次,\n手牌错误:${wrongCard}次,`
+    document.body.appendChild(div)
+</script>
+</body>
+</html>
